@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="ms-MY">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Kemahiran Pemulihan: Masa dan Waktu (Asas)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { box-sizing: border-box; }
+    .activity-card { min-height: 400px; }
+    .item-card { transition: all .3s ease; cursor: pointer; }
+    .item-card:hover { transform: scale(1.05); }
+
+    .dragging { opacity: .5; transform: rotate(5deg); }
+    .drop-zone {
+      border-width: 2px; border-style: dashed; border-color: #cbd5e1;
+      transition: all .3s ease; min-width: 60px; min-height: 60px;
+    }
+    .drop-zone.drag-over { border-color: #3b82f6; background-color: #eff6ff; }
+
+    @keyframes shake {
+      0% { transform: translateX(0); } 25% { transform: translateX(-5px); }
+      50% { transform: translateX(5px); } 75% { transform: translateX(-5px); }
+      100% { transform: translateX(0); }
+    }
+    .shake { animation: shake 0.5s ease; }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); }
+    }
+    .pulse { animation: pulse 0.5s ease; }
+
+    /* Aktiviti 1: Tukar Pemandangan */
+    #scene-container {
+      height: 300px; width: 100%;
+      background-size: cover; background-position: center;
+      border: 4px solid #cbd5e1; border-radius: 0.5rem;
+      transition: background-image 0.5s ease;
+      background-image: url('https://iili.io/KZCrkYB.md.png');
+      cursor: zoom-in;
+    }
+
+    /* Aktiviti 2: Klik Gambar Betul / Namakan Pemandangan */
+    .choice-image {
+      border: 4px solid #e5e7eb; border-radius: 0.5rem;
+      transition: all 0.2s ease;
+      width: 100%; height: 250px; /* Saiz tetap */
+      object-fit: cover; /* Pastikan imej penuh */
+    }
+    .choice-image:hover { border-color: #9ca3af; }
+    .choice-image.correct { border-color: #4ade80; }
+    .choice-image.wrong { border-color: #f87171; }
+    
+    /* Aktiviti 4: Mari Sebut Bulan */
+    .month-list-item {
+      padding: 0.5rem 1rem; border-radius: 0.5rem;
+      font-weight: 600; text-align: left;
+      transition: background-color 0.2s;
+    }
+    .month-list-item.highlight {
+      background-color: #fef3c7; color: #b45309;
+      transform: scale(1.05);
+    }
+    
+    /* Aktiviti 5: Cari Perkataan Hari */
+    .word-grid {
+      display: grid; grid-template-columns: repeat(10, 1fr);
+      gap: 4px; user-select: none;
+    }
+    .grid-cell {
+      width: 100%; padding-top: 100%; /* Nisbah 1:1 */
+      position: relative;
+      border: 1px solid #e5e7eb; border-radius: 0.25rem;
+      background: #f9fafb;
+    }
+    .grid-cell-content {
+      position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 600; font-size: 1.1rem;
+      cursor: pointer;
+    }
+    .grid-cell-content:hover { background-color: #f3f4f6; }
+    .grid-cell-content.selected { background-color: #fef3c7; }
+    .grid-cell-content.found { background-color: #dcfce7; color: #166534; }
+    .word-list-item.found { text-decoration: line-through; color: #6b7280; }
+
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-purple-50 min-h-full">
+
+  <div class="bg-yellow-100 border-b-4 border-yellow-300 p-4 shadow-sm sticky top-0 z-10">
+    <div class="max-w-6xl mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <span class="text-2xl">📚</span>
+        <span id="info-text" class="text-lg font-semibold text-gray-800">
+          Pilih aktiviti (Asas) untuk mula belajar Masa dan Waktu!
+        </span>
+      </div>
+      <button id="speak-btn"
+              class="bg-yellow-300 hover:bg-yellow-400 text-yellow-800 font-bold py-2 px-4 rounded-full text-xl transition-colors duration-200"
+              onclick="speakInfo()">
+        🔊
+      </button>
+    </div>
+  </div>
+
+  <div class="max-w-6xl mx-auto p-6">
+    <div class="bg-white rounded-xl shadow-lg p-6 mb-6 activity-card flex items-center justify-center">
+      <div id="activity-content" class="text-center w-full">
+        <div class="py-16">
+          <div class="text-6xl mb-4">⏰</div>
+          <h2 class="text-3xl font-bold text-gray-800 mb-4">
+            Kemahiran Pemulihan: Masa dan Waktu (Asas)
+          </h2>
+          <p class="text-xl text-gray-600 mb-8">
+            Mari kita teroka aktiviti mudah ini untuk kenali masa.
+          </p>
+          <div class="text-4xl">👇</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-lg p-6">
+      <h3 class="text-2xl font-bold text-gray-800 mb-4 text-center">Pilih Aktiviti (Asas)</h3>
+      <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
+        <button onclick="loadActivity(1)"
+                class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg text-lg transition-colors duration-200">
+          🏞️ Tukar Pemandangan
+        </button>
+        <button onclick="loadActivity(2)"
+                class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg text-lg transition-colors duration-200">
+          🖼️ Namakan Pemandangan
+        </button>
+        <button onclick="loadActivity(3)"
+                class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-4 rounded-lg text-lg transition-colors duration-200">
+          ➡️ Apa Selepas Ini?
+        </button>
+        <button onclick="loadActivity(4)"
+                class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-4 rounded-lg text-lg transition-colors duration-200">
+          🗣️ Mari Sebut Bulan
+        </button>
+        <button onclick="loadActivity(5)"
+                class="bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-4 rounded-lg text-lg transition-colors duration-200">
+          🔍 Cari Perkataan Hari
+        </button>
+      </div>
+
+      <div class="flex justify-center gap-4">
+        <button onclick="clearActivity()" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-lg text-lg transition-colors duration-200">
+          🧹 Bersih
+        </button>
+        <button onclick="nextActivity()" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-lg text-lg transition-colors duration-200">
+          ➡️ Seterusnya
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="image-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50 hidden" onclick="closeModal()">
+    <div class="bg-white p-4 rounded-lg relative max-w-full max-h-full" onclick="event.stopPropagation()">
+      <button id="modal-close" class="absolute -top-3 -right-3 bg-red-500 text-white rounded-full h-8 w-8 text-xl font-bold flex items-center justify-center" onclick="closeModal()">×</button>
+      <img id="modal-img" src="" alt="Pemandangan Penuh" class="max-w-full max-h-[80vh] object-contain">
+    </div>
+  </div>
+  <script>
+    let currentActivity = 0;
+    let ttsEnabled = false;
+    let currentInfo = "Pilih aktiviti (Asas) untuk mula belajar Masa dan Waktu!";
+    
+    let currentSceneUrl = ""; // Simpan URL imej semasa untuk modal
+
+    // State untuk aktiviti
+    window.sceneQuiz = { currentQ: 0 }; 
+    window.nextDayGame = { currentQ: 0 };
+    window.wordSearch = {
+        grid: [],
+        words: ["ISNIN", "SELASA", "RABU", "KHAMIS", "JUMAAT", "SABTU", "AHAD"],
+        found: [],
+        selected: []
+    };
+
+    /* ====== TTS ====== */
+    function speak(text) {
+      if (!ttsEnabled) return;
+      if (!('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel();
+      setTimeout(() => {
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = 'ms-MY';
+        u.rate = 0.9; u.pitch = 1.05;
+        const voices = window.speechSynthesis.getVoices();
+        const ms = voices.find(v => v.lang === 'ms-MY' || v.lang?.startsWith('ms'));
+        if (ms) u.voice = ms;
+        window.speechSynthesis.speak(u);
+      }, 100);
+    }
+    function setInfo(text) { currentInfo = text; document.getElementById('info-text').textContent = text; }
+    function speakInfo() {
+      if (!ttsEnabled) {
+        ttsEnabled = true;
+        const btn = document.getElementById('speak-btn');
+        btn.classList.add('bg-green-300', 'hover:bg-green-400');
+        btn.classList.remove('bg-yellow-300', 'hover:bg-yellow-400');
+      }
+      speak(currentInfo);
+    }
+
+    /* ====== FUNGSI MODAL ====== */
+    function openModal() {
+      const modal = document.getElementById('image-modal');
+      const modalImg = document.getElementById('modal-img');
+      if (currentSceneUrl) {
+        modalImg.src = currentSceneUrl; 
+        modal.classList.remove('hidden'); 
+      }
+    }
+    function closeModal() {
+      const modal = document.getElementById('image-modal');
+      modal.classList.add('hidden'); 
+      document.getElementById('modal-img').src = ""; 
+    }
+
+    /* ====== Router ====== */
+    function loadActivity(n) {
+      currentActivity = n;
+      const content = document.getElementById('activity-content');
+      if (window.calendarSongTimeout) clearTimeout(window.calendarSongTimeout);
+      
+      if (n === 1) return loadSceneChangeActivity(content);
+      if (n === 2) return loadSceneQuizActivity(content); 
+      if (n === 3) return loadNextDayActivity(content);
+      // ====== (DIKEMAS KINI) Router Aktiviti 4 ======
+      if (n === 4) return loadCalendarSpeakActivity(content); // Nama fungsi ditukar
+      if (n === 5) return loadWordSearchActivity(content);
+    }
+
+    /* ====== Aktiviti 1: Tukar Pemandangan ====== */
+    function loadSceneChangeActivity(content) {
+      setInfo("Klik butang untuk melihat pemandangan pada waktu yang berbeza.");
+      
+      const scenes = {
+        pagi: "https://iili.io/KZCrkYB.md.png",
+        tengahari: "https://iili.io/KZCy3s2.md.png",
+        petang: "https://iili.io/KZn9YCl.md.png",
+        malam: "https://iili.io/KZnJn5X.md.png"
+      };
+
+      currentSceneUrl = scenes.pagi; 
+
+      content.innerHTML = `
+        <h3 class="text-2xl font-bold text-blue-600 mb-6">🏞️ Tukar Pemandangan</h3>
+        
+        <div id="scene-container" class="mb-4 relative" style="background-image: url('${scenes.pagi}');" onclick="openModal()">
+          <div class="absolute top-2 left-2 text-white bg-black bg-opacity-50 px-2 py-1 rounded-full text-sm">
+            🔍 Klik untuk besarkan
+          </div>
+        </div>
+
+        <div class="flex flex-wrap justify-center gap-3">
+          <button onclick="changeScene('pagi', '${scenes.pagi}')" class="item-card bg-blue-100 hover:bg-blue-200 text-blue-800 font-bold py-3 px-6 rounded-lg text-lg">☀️ Pagi</button>
+          <button onclick="changeScene('tengahari', '${scenes.tengahari}')" class="item-card bg-yellow-100 hover:bg-yellow-200 text-yellow-800 font-bold py-3 px-6 rounded-lg text-lg">🌞 Tengah Hari</button>
+          <button onclick="changeScene('petang', '${scenes.petang}')" class="item-card bg-orange-100 hover:bg-orange-200 text-orange-800 font-bold py-3 px-6 rounded-lg text-lg">🌇 Petang</button>
+          <button onclick="changeScene('malam', '${scenes.malam}')" class="item-card bg-indigo-100 hover:bg-indigo-200 text-indigo-800 font-bold py-3 px-6 rounded-lg text-lg">🌙 Malam</button>
+        </div>
+      `;
+      
+      setInfo("Ini waktu pagi. Klik gambar untuk besarkan.");
+      speak("Ini waktu pagi. Klik gambar untuk besarkan.");
+    }
+    
+    function changeScene(time, imageUrl) {
+      document.getElementById('scene-container').style.backgroundImage = 'url(' + imageUrl + ')';
+      currentSceneUrl = imageUrl; 
+      const msg = `Ini waktu ${time}. Lihat pemandangan.`;
+      setInfo(msg);
+      speak(msg);
+    }
+
+    /* ====== Aktiviti 2: Namakan Pemandangan ====== */
+    function loadSceneQuizActivity(content) {
+      const questions = [
+        { img: "https://iili.io/KZCrkYB.md.png", correct: "Pagi", choices: ["Pagi", "Tengah Hari", "Petang", "Malam"] },
+        { img: "https://iili.io/KZCy3s2.md.png", correct: "Tengah Hari", choices: ["Pagi", "Tengah Hari", "Petang", "Malam"] },
+        { img: "https://iili.io/KZn9YCl.md.png", correct: "Petang", choices: ["Pagi", "Tengah Hari", "Petang", "Malam"] },
+        { img: "https://iili.io/KZnJn5X.md.png", correct: "Malam", choices: ["Pagi", "Tengah Hari", "Petang", "Malam"] }
+      ];
+
+      questions.sort(() => Math.random() - 0.5);
+      window.sceneQuiz.currentQ = 0;
+      
+      function drawSceneQuestion(qIndex) {
+        const qData = questions[qIndex];
+        const shuffledChoices = [...qData.choices].sort(() => Math.random() - 0.5);
+        
+        content.innerHTML = `
+          <h3 class="text-2xl font-bold text-green-600 mb-6">🖼️ Namakan Pemandangan</h3>
+          <div id="question-text" class="text-3xl font-bold text-gray-800 mb-6">Gambar ini waktu apa?</div>
+          
+          <img src="${qData.img}" class="item-card border-4 border-gray-300 rounded-lg h-64 w-full object-cover mb-6">
+          
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            ${shuffledChoices.map(choice => {
+              let icon = "☀️";
+              if (choice === 'Tengah Hari') icon = '🌞';
+              if (choice === 'Petang') icon = '🌇';
+              if (choice === 'Malam') icon = '🌙';
+              
+              return `
+                <button onclick="checkSceneAnswer('${choice}', '${qData.correct}')" 
+                        class="item-card bg-green-100 hover:bg-green-200 text-green-800 font-bold py-4 px-6 rounded-lg text-2xl">
+                  ${icon} ${choice}
+                </button>
+              `
+            }).join('')}
+          </div>
+        `;
+        setInfo("Gambar ini waktu apa?");
+        speak("Gambar ini waktu apa?");
+      }
+      
+      drawSceneQuestion(0); 
+
+      window.checkSceneAnswer = (clickedChoice, correctChoice) => {
+        if (clickedChoice === correctChoice) {
+          setInfo("Bagus! Betul."); speak("Bagus! Betul.");
+          
+          window.sceneQuiz.currentQ++;
+          if (window.sceneQuiz.currentQ >= questions.length) {
+            window.sceneQuiz.currentQ = 0; 
+          }
+          setTimeout(() => drawSceneQuestion(window.sceneQuiz.currentQ), 1000);
+          
+        } else {
+          const btn = event.target; 
+          btn.classList.add('shake', 'bg-red-100');
+          setInfo("Bukan. Cuba lagi."); speak("Bukan. Cuba lagi.");
+          setTimeout(() => btn.classList.remove('shake', 'bg-red-100'), 500);
+        }
+      }
+    }
+
+    /* ====== Aktiviti 3: Apa Selepas Ini? ====== */
+    function loadNextDayActivity(content) {
+      const questions = [
+        { q: "Isnin", a: "Selasa", choices: ["Ahad", "Selasa", "Rabu"] },
+        { q: "Khamis", a: "Jumaat", choices: ["Jumaat", "Rabu", "Sabtu"] },
+        { q: "Sabtu", a: "Ahad", choices: ["Jumaat", "Isnin", "Ahad"] }
+      ];
+      window.nextDayGame.currentQ = 0;
+
+      function drawDayQuestion(qIndex) {
+        const qData = questions[qIndex];
+        const shuffledChoices = [...qData.choices].sort(() => Math.random() - 0.5);
+        content.innerHTML = `
+          <h3 class="text-2xl font-bold text-purple-600 mb-6">➡️ Apa Selepas Ini?</h3>
+          <div class="mb-4">
+            <div class="text-lg text-gray-600">Hari ini ialah:</div>
+            <div class="text-6xl font-bold text-gray-800 mb-6">${qData.q}</div>
+          </div>
+          <div class="text-lg font-semibold text-gray-600 mb-3">Hari esok ialah:</div>
+          <div class="flex flex-wrap justify-center gap-3">
+            ${shuffledChoices.map(choice => `
+              <button onclick="checkDayAnswer('${choice}', '${qData.a}')" class="item-card bg-purple-100 hover:bg-purple-200 text-purple-800 font-bold py-4 px-8 rounded-lg text-2xl">
+                ${choice}
+              </button>
+            `).join('')}
+          </div>
+        `;
+        setInfo(`Selepas ${qData.q}, hari apa?`);
+        speak(`Selepas ${qData.q}, hari apa?`);
+      }
+
+      drawDayQuestion(0);
+
+      window.checkDayAnswer = (clickedDay, correctDay) => {
+        if (clickedDay === correctDay) {
+          setInfo(`Betul! Selepas ${questions[window.nextDayGame.currentQ].q} ialah ${correctDay}.`);
+          speak(`Betul! ${correctDay}.`);
+          
+          window.nextDayGame.currentQ++;
+          if (window.nextDayGame.currentQ >= questions.length) {
+            window.nextDayGame.currentQ = 0;
+          }
+          setTimeout(() => drawDayQuestion(window.nextDayGame.currentQ), 1000);
+        } else {
+          const btn = event.target;
+          btn.classList.add('shake', 'bg-red-100');
+          setInfo("Bukan. Cuba lagi."); speak("Bukan. Cuba lagi.");
+          setTimeout(() => btn.classList.remove('shake', 'bg-red-100'), 500);
+        }
+      }
+    }
+
+    /* ====== (DIKEMAS KINI) Aktiviti 4: Mari Sebut Bulan ====== */
+    window.calendarSongTimeout = null; 
+    function loadCalendarSpeakActivity(content) { // Nama fungsi ditukar
+      setInfo("Tekan 'Main' untuk mendengar dan melihat 12 bulan mengikut urutan.");
+      const MONTHS = ["Januari", "Februari", "Mac", "April", "Mei", "Jun", "Julai", "Ogos", "September", "Oktober", "November", "Disember"];
+      
+      content.innerHTML = `
+        <h3 class="text-2xl font-bold text-orange-600 mb-6">🗣️ Mari Sebut Bulan</h3>
+        <div class="flex justify-center mb-6">
+          <button id="play-song-btn" onclick="playCalendarSong()" class="item-card bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 px-10 rounded-lg text-2xl">
+            ▶️ Main
+          </button>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-4 max-w-2xl mx-auto">
+          ${MONTHS.map((month, index) => `
+            <div id="month-item-${index}" class="month-list-item bg-gray-100 text-gray-700">
+              ${index + 1}. ${month}
+            </div>
+          `).join('')}
+        </div>
+      `;
+      
+      window.playCalendarSong = () => {
+        document.getElementById('play-song-btn').disabled = true;
+        document.getElementById('play-song-btn').classList.add('opacity-50');
+
+        let index = 0;
+        function highlightNext() {
+          if (index > 0) {
+            document.getElementById(`month-item-${index - 1}`).classList.remove('highlight');
+          }
+          if (index < MONTHS.length) {
+            const item = document.getElementById(`month-item-${index}`);
+            item.classList.add('highlight');
+            speak(MONTHS[index]);
+            index++;
+            window.calendarSongTimeout = setTimeout(highlightNext, 1000); 
+          } else {
+            document.getElementById(`month-item-${index - 1}`).classList.remove('highlight');
+            document.getElementById('play-song-btn').disabled = false;
+            document.getElementById('play-song-btn').classList.remove('opacity-50');
+            setInfo("Syabas! Ulang semula jika anda mahu.");
+            speak("Syabas! Ulang semula jika anda mahu.");
+          }
+        }
+        highlightNext();
+      }
+    }
+
+    /* ====== Aktiviti 5: Cari Perkataan Hari ====== */
+    function loadWordSearchActivity(content) {
+      setInfo("Cari 7 nama hari dalam grid. Klik huruf untuk pilih.");
+      
+      window.wordSearch.found = [];
+      window.wordSearch.selected = [];
+      
+      const grid = [
+        ['S', 'E', 'L', 'A', 'S', 'A', 'X', 'Y', 'Z', 'Q'],
+        ['A', 'H', 'A', 'D', 'K', 'B', 'C', 'D', 'E', 'F'],
+        ['G', 'H', 'J', 'K', 'H', 'L', 'M', 'N', 'O', 'P'],
+        ['I', 'S', 'N', 'I', 'N', 'R', 'S', 'T', 'U', 'V'],
+        ['W', 'X', 'Y', 'Z', 'I', 'A', 'B', 'C', 'D', 'E'],
+        ['F', 'G', 'R', 'A', 'B', 'U', 'H', 'I', 'J', 'K'],
+        ['L', 'M', 'N', 'O', 'L', 'P', 'Q', 'R', 'S', 'T'],
+        ['U', 'V', 'W', 'J', 'U', 'M', 'A', 'A', 'T', 'X'],
+        ['Y', 'Z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'],
+        ['I', 'J', 'S', 'A', 'B', 'T', 'U', 'K', 'L', 'M']
+      ];
+      window.wordSearch.grid = grid;
+
+      content.innerHTML = `
+        <h3 class="text-2xl font-bold text-red-600 mb-6">🔍 Cari Perkataan Hari</h3>
+        <div class="flex flex-col md:flex-row gap-6">
+          <div class="w-full md:w-1/3">
+            <h4 class="text-lg font-semibold mb-2">Cari Ini:</h4>
+            <div id="word-list" class="flex flex-col gap-2">
+              ${window.wordSearch.words.map(word => `
+                <div id="list-item-${word}" class="word-list-item text-xl font-bold text-gray-700 p-2 bg-gray-100 rounded">
+                  ${word}
+                </div>
+              `).join('')}
+            </div>
+            <h4 class="text-lg font-semibold mt-4 mb-2">Pilihan:</h4>
+            <div id="selected-word" class="p-3 bg-white border-2 border-gray-300 rounded min-h-[48px] text-xl font-bold"></div>
+            <button onclick="clearSelection()" class="mt-2 bg-gray-500 text-white py-2 px-4 rounded w-full">Padam Pilihan</button>
+          </div>
+          
+          <div class="w-full md:w-2/3">
+            <div class="word-grid">
+              ${grid.map((row, r) => row.map((cell, c) => `
+                <div class="grid-cell">
+                  <div class="grid-cell-content" onclick="selectCell(this, ${r}, ${c}, '${cell}')">
+                    ${cell}
+                  </div>
+                </div>
+              `).join('')).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+      setInfo("Klik pada huruf untuk membentuk nama hari.");
+    }
+    
+    function selectCell(element, r, c, cell) {
+      const { selected, words, found } = window.wordSearch;
+      if (element.classList.contains('found')) return;
+      if (element.classList.contains('selected')) {
+        element.classList.remove('selected');
+        window.wordSearch.selected = selected.filter(s => s.r !== r || s.c !== c);
+      } else {
+        element.classList.add('selected');
+        selected.push({ r, c, cell });
+      }
+      updateSelectedWord();
+    }
+    
+    function updateSelectedWord() {
+      const { selected, words, found } = window.wordSearch;
+      selected.sort((a, b) => a.c - b.c); 
+      const currentWord = selected.map(s => s.cell).join('');
+      document.getElementById('selected-word').textContent = currentWord;
+      
+      if (words.includes(currentWord) && !found.includes(currentWord)) {
+        window.wordSearch.found.push(currentWord);
+        document.getElementById(`list-item-${currentWord}`).classList.add('found');
+        
+        selected.forEach(s => {
+          const cellEl = document.querySelector(`.word-grid > div:nth-child(${s.r * 10 + s.c + 1}) .grid-cell-content`);
+          cellEl.classList.add('found');
+          cellEl.classList.remove('selected');
+        });
+        
+        setInfo(`Bagus! Anda jumpa ${currentWord}.`);
+        speak(`Bagus! Anda jumpa ${currentWord}.`);
+        window.wordSearch.selected = [];
+        document.getElementById('selected-word').textContent = "";
+        
+        if (window.wordSearch.found.length === words.length) {
+          setInfo("Syabas! Anda telah jumpa semua perkataan!");
+          speak("Syabas! Anda telah jumpa semua perkataan!");
+        }
+      }
+    }
+
+    function clearSelection() {
+      window.wordSearch.selected = [];
+      document.getElementById('selected-word').textContent = "";
+      document.querySelectorAll('.grid-cell-content.selected').forEach(el => {
+        el.classList.remove('selected');
+      });
+      setInfo("Pilihan dipadam. Sila cuba lagi.");
+    }
+
+    /* ====== Kawalan Umum ====== */
+    function clearActivity() {
+      currentActivity = 0;
+      if (window.calendarSongTimeout) clearTimeout(window.calendarSongTimeout);
+      document.getElementById('activity-content').innerHTML = `
+        <div class="text-center py-16">
+          <div class="text-6xl mb-4">⏰</div>
+          <h2 class="text-3xl font-bold text-gray-800 mb-4">Kemahiran Pemulihan: Masa dan Waktu (Asas)</h2>
+          <p class="text-xl text-gray-600 mb-8">Mari kita teroka aktiviti mudah ini untuk kenali masa.</p>
+          <div class="text-4xl">👇</div>
+        </div>
+      `;
+      setInfo("Pilih aktiviti (Asas) untuk mula belajar Masa dan Waktu!");
+    }
+    
+    function nextActivity() {
+      if (currentActivity === 0) return loadActivity(1);
+      if (currentActivity < 5) return loadActivity(currentActivity + 1);
+      return loadActivity(1);
+    }
+    
+    if ('speechSynthesis' in window) {
+      setInterval(() => { if (window.speechSynthesis.paused) window.speechSynthesis.resume(); }, 1000);
+    }
+  </script>
+</body>
+</html>
